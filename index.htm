@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+    <meta charset="utf-8"/>
+    <title>Minigame - Frederico</title>
+    <style>
+        
+        canvas {
+            position: absolute;
+            top: 0px;
+            bottom: 0px;
+            left: 0px;
+            right: 0px;
+            margin: auto;
+
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <script>
+        // Game variables
+        var canvas, context, gameHeight, gameWidth, frames = 0, maxJump = 3,
+
+        ground = {
+            y: 550,
+            groundHeight: 50,
+            groundColor: "#ffdf70",
+
+            drawGround: function(){
+                context.fillStyle = this.groundColor;
+                context.fillRect(0, this.y, gameWidth, this.groundHeight)
+            }
+        }// End of variable ground
+
+        player = {
+            x:50,
+            y:0,
+            playerHeight: 50,
+            playerWidth:50,
+            playerColor: "#ff4e4e",
+            gravity: 1.6,
+            speed: 0,
+            jumpSpeed: 23.6,
+            jumps: 0,
+
+            drawPlayer: function() {
+                context.fillStyle = this.playerColor;
+                context.fillRect(this.x, this.y, this.playerWidth, this.playerHeight);
+            },
+            playerMovement: function() {
+                this.speed += this.gravity;
+                this.y += this.speed;
+
+                if(this.y > ground.y - this.playerHeight) {
+                    this.y = ground.y - this.playerHeight;
+                    this.jumps =0;
+                }
+            },
+
+            jump: function(){
+                if(this.jumps < maxJump){
+                    this.speed = - this.jumpSpeed;
+                    this.jumps++;
+                }
+            }
+        }// End of variable player
+
+        function onClick(event){
+
+            player.jump();
+
+        }
+
+        function main(){
+
+            gameHeight = window.innerHeight;
+            gameWidth = window.innerWidth;
+
+            if (gameWidth >= 600){
+
+                gameWidth = 600;
+                gameHeight = 600;
+
+            }
+
+            canvas = document.createElement("canvas");
+
+            canvas.width = gameWidth;
+
+            canvas.height = gameHeight;
+
+            canvas.style.border = "1px solid #000";
+
+            context = canvas.getContext("2d");
+
+            document.body.appendChild(canvas);
+
+            document.addEventListener("mousedown", onClick);
+
+            runGame();
+        }
+
+        function runGame(){
+
+            updtStats();
+            draw();
+
+            window.requestAnimationFrame(runGame);
+
+        }
+
+        function updtStats(){
+
+            frames++;
+
+            player.playerMovement();
+
+        }
+
+        function draw(){
+
+            context.fillStyle = "#50beff";
+            context.fillRect(0, 0, gameHeight, gameWidth);
+
+            ground.drawGround();
+            player.drawPlayer();
+
+        }
+            
+        main();
+    </script>
+
+</body>
+
+</html>
