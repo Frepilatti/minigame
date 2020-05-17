@@ -25,7 +25,13 @@
 
     <script>
         // Game variables
-        var canvas, context, gameHeight, gameWidth, frames = 0, maxJump = 3,
+        var canvas, 
+            context, 
+            gameHeight, 
+            gameWidth, 
+            frames = 0, 
+            maxJump = 3, 
+            obstacleSpeed = 6,
 
         ground = {
             y: 550,
@@ -36,7 +42,7 @@
                 context.fillStyle = this.groundColor;
                 context.fillRect(0, this.y, gameWidth, this.groundHeight)
             }
-        }// End of variable ground
+        },// End of variable ground
 
         player = {
             x:50,
@@ -69,14 +75,58 @@
                     this.jumps++;
                 }
             }
-        }// End of variable player
+        },// End of variable player
+
+        obstacle = {
+            _obs: [],
+            obstacleColors: ["#a0ff1c", "#ffbc1c", "#ff1c1c", "#ff85e1", "#ce3fdc", "#78ff5d"],
+            insertTime: 0,
+
+            insertObstacle: function(){
+                this._obs.push({
+                    x: gameWidth,
+                    obstacleWidth: 30 + Math.floor(21 * Math.random()),
+                    obstacleHeigth: 30 + Math.floor(120*Math.random()),
+                    obstacleColor: this.obstacleColors[Math.floor(6 * Math.random())]
+                });
+                this.insertTime = 30 + Math.floor(21 * Math.random());
+            },
+            updtObstacle: function(){
+                if (this.insertTime == 0){
+                    this.insertObstacle();
+                }
+                else{
+                    this.insertTime--;
+                }
+
+                for(var i = 0,  size = this._obs.length; i < size; i++) {
+                    var obs = this._obs[i];
+
+                    obs.x -= obstacleSpeed;
+
+                    if (obs.x <= -obs.obstacleWidth) {
+                        this._obs.splice(i, 1);
+                        size--;
+                        i--;
+                    }
+                }
+            },
+            drawObstacle: function(){
+                for(var i = 0, size = this._obs.length; i < size; i++){
+                    var obs = this._obs[i];
+                    context.fillStyle = obs.obstacleColor;
+                    context.fillRect(obs.x, ground.y - obs.obstacleHeigth, obs.obstacleWidth, obs.obstacleHeigth);
+
+                }
+            }
+        };// End of variable obstacle
 
         function onClick(event){
 
             player.jump();
 
         }
-
+        
         function main(){
 
             gameHeight = window.innerHeight;
@@ -120,7 +170,7 @@
             frames++;
 
             player.playerMovement();
-
+            obstacle.updtObstacle();
         }
 
         function draw(){
@@ -129,7 +179,9 @@
             context.fillRect(0, 0, gameHeight, gameWidth);
 
             ground.drawGround();
+            obstacle.drawObstacle();
             player.drawPlayer();
+
 
         }
             
