@@ -6,6 +6,7 @@
 
     <meta charset="utf-8"/>
     <title>Minigame - Frederico</title>
+    <script src="./Sprite.js"></script>
     <style>
         
         canvas {
@@ -29,11 +30,41 @@
             context, 
             gameHeight, 
             gameWidth, 
-            frames = 0, 
             maxJump = 3, 
             obstacleSpeed = 6,
             currentStats,
             highScore,
+            img,
+            pointsToNextLvl = [10, 20, 30, 40, 50],
+            currentLvl = 0,
+
+            labelnextLvl = {
+                newText: "",
+                textOpacity: 0.0,
+
+                fadeIn: function(dt){
+                    var fadeInId = setInterval(function(){
+                        if (labelnextLvl.textOpacity < 1.0) {
+                            labelnextLvl.textOpacity += 0.01;
+                        }
+                        else {
+                            clearInterval(fadeInId);
+                        }
+                    }, 10 * dt);
+                },
+
+                fadeOut: function(dt){
+                    var fadeOutId = setInterval(function(){
+                        if (labelnextLvl.textOpacity > 0.0) {
+                            labelnextLvl.textOpacity -= 0.01;
+                        }
+                        else {
+                            clearInterval(fadeOutId);
+                        }
+                    }, 10 * dt);
+
+                }
+            },
 
             stats = {
                 play: 0,
@@ -43,39 +74,54 @@
 
             ground = {
                 y: 550,
+                x: 0,
                 groundHeight: 50,
-                groundColor: "#ffdf70",
+
+                updtGround: function(){
+                    this.x -= obstacleSpeed;
+                    if(this.x <= -30){
+                        this.x += 30;
+                    }
+                },
 
                 drawGround: function(){
-                    context.fillStyle = this.groundColor; // Defines the ground color
-                    context.fillRect(0, this.y, gameWidth, this.groundHeight); // Defines from where to where the ground will be drawn
+                    spriteGround.draw(this.x, this.y);
+                    spriteGround.draw(this.x + spriteGround.imgWidth, this.y);
                 }
             },// Closing ground
 
             player = {
                 x:50,
                 y:0,
-                playerHeight: 50,
-                playerWidth:50,
-                playerColor: "#ff4e4e",
+                playerHeight: playerSprite.imgHeight,
+                playerWidth:playerSprite.imgWidth,
                 gravity: 1.6,
                 speed: 0,
                 jumpSpeed: 23.6,
                 jumps: 0,
                 score: 0,
+                spin: 0,
+                lives: 3,
+                colission: false,
 
                 drawPlayer: function() {
-                    context.fillStyle = this.playerColor; // Defines the color of the player
-                    context.fillRect(this.x, this.y, this.playerWidth, this.playerHeight); // Defines from where to where the player will be drawn
+                   
+                   context.save();
+                   context.translate(this.x + this.playerWidth / 2, this.y + this.playerHeight / 2);
+                   context.rotate(this.spin);
+                   playerSprite.draw(-this.playerWidth / 2, - this.playerHeight / 2); 
+                   context.restore();
                 },
-                playerMovement: function() {
-                    this.speed += this.gravity; // Takes the value of the speed defined in the player and adds the value of the variable gravity also defined inside the player
-                    this.y += this.speed; // takes the value of y defined in the player and adds the value of the new speed
 
-                    if(this.y > ground.y - this.playerHeight && currentStats != stats.lose) { // If the value of y is greater then the y defined for the ground (550) minus the player's weight (50), we need to decrease the size of the player, because this.y is at the top of the player, if we didn't decrease it the player would only stop once its top hit the ground
-                        this.y = ground.y - this.playerHeight; // If thats true the player will no longer fall and its y will be equal to the ground's y minus players height
-                        this.jumps =0; // Once the player hits the ground the value of the variable jumps will be set to 0 again, making the player be able to jump if it had jumped 3 times already
-                        this.speed = 0; // Sets the speed back to 0
+                playerMovement: function() {
+                    this.speed += this.gravity; 
+                    this.y += this.speed; 
+                    this.spin += Math.PI / 180 * obstacleSpeed;
+
+                    if(this.y > ground.y - this.playerHeight && currentStats != stats.lose) { 
+                        this.y = ground.y - this.playerHeight; 
+                        this.jumps =0; 
+                        this.speed = 0;
                     }
                 },
 
@@ -89,33 +135,37 @@
                         localStorage.setItem("highScore", this.score);
                         highScore = this.score;
                     }
-                    
+                    this.lives = 3;
                     this.score = 0;
 
-                },// Resets the values to 0 once the player lose
+                    obstacleSpeed = 6;
+                    currentLvl = 0;
+                    this.gravity = 1.6;
+
+                },
 
                 jump: function(){
-                    if(this.jumps < maxJump){ // if the number of jumps a player has done is less then the value set to be the maximum number of jumps a player can do without touching the ground, it will do the following
-                        this.speed = - this.jumpSpeed; // Makes the player jump, by setting its speed to go on the opposit direction in a value of - jumpSpeed (-23.6)
-                        this.jumps++; // Adds 1 to the amount of jumps the player has done, it starts at 0 and once it goes up to 3 the player won't be able to jump without hitting the ground
+                    if(this.jumps < maxJump){ 
+                        this.speed = - this.jumpSpeed; 
+                        this.jumps++; 
                     }
                 }
             },// Closing player
 
             obstacle = {
-                _obs: [], // Defines _obs as an empty array
-                obstacleColors: ["#a0ff1c", "#ffbc1c", "#ff1c1c", "#ff85e1", "#ce3fdc", "#78ff5d"],
+                _obs: [], 
+                _scored: false,
+                _sprites: [redObstacle, pinkObstacle, blueObstacle, greenObstacle, yellowObstacle],
                 insertTime: 0,
 
                 insertObstacle: function(){
-                    this._obs.push({ // push adds a new element to the array and returns the new array
+                    this._obs.push({ 
                         x: gameWidth, 
-                        //obstacleWidth: 30 + Math.floor(21 * Math.random()),// Randomizes the width of the new obstacle
+                        y: ground.y - Math.floor(20 + Math.random() * 100),
                         obstacleWidth: 50,
-                        obstacleHeigth: 30 + Math.floor(120*Math.random()),// Randomizes the height of the new obstacle
-                        obstacleColor: this.obstacleColors[Math.floor(6 * Math.random())]//Randomizes the collor of the obstacle
+                        sprite: this._sprites[Math.floor(this._sprites.length * Math.random())]
                     });
-                    this.insertTime = 35 + Math.floor(21 * Math.random()); // Randomizes the interval between one obstacle and other
+                    this.insertTime = 35 + Math.floor(20 * Math.random());
                 },
                 updtObstacle: function(){
 
@@ -128,23 +178,35 @@
 
                         this.insertTime--;
 
-                    }// If the time defined as insertTime is 0 then a new obstacle will be added, else the value of insertTime will decrease by 1 until it gets to 0
+                    }
 
                     for(var i = 0,  size = this._obs.length; i < size; i++) {
                         var obs = this._obs[i];
-
                         obs.x -= obstacleSpeed;
 
-                        if (player.x <obs.x + obs.obstacleWidth && player.x + player.playerWidth >= obs.x && player.y + player.playerHeight >= ground.y - obs.obstacleHeigth){
+                        if (!player.colission && player.x <= obs.x + obs.obstacleWidth && player.x + player.playerWidth >= obs.x && player.y + player.playerHeight >= obs.y){
+                            player.colission = true;
+                        
+                            setTimeout(function(){
+                                player.colission = false;
+                            }, 500) ;
 
+                            if (player.lives >= 1){
+                                player.lives --;
+                            }
+
+                            else{
                             currentStats = stats.lose;
-
+                            }
                         }
 
-                        else if (obs.x == 0) {
-
+                        else if (obs.x <= 0 && !obs._scored) {
                             player.score++;
+                            obs._scored = true;
 
+                            if (currentLvl < pointsToNextLvl.length && player.score == pointsToNextLvl[currentLvl]){
+                                nextLvl();
+                            }
                         }
 
                         else if (obs.x <= -obs.obstacleWidth) {
@@ -152,20 +214,19 @@
                             size--;
                             i--;
                         }
-                    }// Uses the speed set in the variable as the speed in wich the obstacles apear and when the obstacle's end hits the end of the canvas it will be removed from the array
+                    }
                 },
 
                 clean: function(){
 
                     this._obs = [];
-                }, // Cleans the array
+                }, 
 
                 drawObstacle: function(){
                     for(var i = 0, size = this._obs.length; i < size; i++){
                         var obs = this._obs[i];
-                        context.fillStyle = obs.obstacleColor;// Defines the collor of the obstacle
-                        context.fillRect(obs.x, ground.y - obs.obstacleHeigth, obs.obstacleWidth, obs.obstacleHeigth); // Defines the size of the obstacle and where it will start
 
+                        obs.sprite.draw(obs.x, obs.y);
                     }
                 }
             };// End of variable obstacle
@@ -174,14 +235,14 @@
 
             if (currentStats == stats.playing){
 
-                player.jump(); // Once the mousedown event happens the function onClick is callled and it will call the function jump
+                player.jump();
 
             }
 
             else if (currentStats == stats.play){
 
                 currentStats = stats.playing;
-            } // When the game is with play stats and the event mousedown happens it will start the game, by setting the stats as playing
+            }
 
             else if (currentStats == stats.lose && player.y >= 2* gameHeight){
 
@@ -190,116 +251,134 @@
                 obstacle.clean();
 
                 player.reset();
-            } // Once the player loses and clicks the stats will be set to play, it will also call the function clean and reset, and if the player clicks again the game will run
+            }
+        }
+
+        function nextLvl() {
+            obstacleSpeed++;
+            currentLvl++;
+            player.lives++;
+
+            if(currentLvl == 4){
+                player.gravity *= 0.6;
+            }
+
+            if ( currentLvl == 5) {
+                player.gravity *=2;
+                maxJump = 6;
+            }
+
+            labelnextLvl.newText = "Level" + currentLvl;
+            labelnextLvl.fadeIn(0.4);
+            setTimeout(function(){
+                labelnextLvl.fadeOut(0.4);
+            }, 800);
+
         }
         
         function main(){
 
-            gameHeight = window.innerHeight; // Defines the game's height to be the same as the window's heigh
-            gameWidth = window.innerWidth;// Defines the game's wifth to be the same as the window's width
+            gameHeight = window.innerHeight;
+            gameWidth = window.innerWidth;
 
             if (gameWidth >= 600){
 
                 gameWidth = 600;
                 gameHeight = 600;
 
-            } // States that the game's size won't be greater then 600
+            } 
 
-            canvas = document.createElement("canvas"); // creates an element canvas on the html
+            canvas = document.createElement("canvas");
 
-            canvas.width = gameWidth;  // Sets the canvas width to be the same as the game's width
+            canvas.width = gameWidth; 
 
-            canvas.height = gameHeight; // Sets the canvas height to be the same as the game's height
+            canvas.height = gameHeight;
 
-            canvas.style.border = "1px solid #000"; // creates a border to the canvas
+            canvas.style.border = "1px solid #000";
 
-            context = canvas.getContext("2d"); // Defines all elements on the canvas as 2d
+            context = canvas.getContext("2d");
 
-            document.body.appendChild(canvas); // Creates the canvas on the body of the html
+            document.body.appendChild(canvas);
 
-            document.addEventListener("mousedown", onClick); // once the mouse is clicked the function onClick will be called
+            document.addEventListener("mousedown", onClick); 
 
-            currentStats = stats.play; // Sets the status of the game before the function runGame is called
+            currentStats = stats.play; 
 
             highScore = localStorage.getItem("highScore"); 
 
             if (!highScore) {
 
                 highScore = 0;
-            } // If there is no high score the hig score will be set to 0
+            } 
 
-            runGame(); // Uses the function runGame
+            img = new Image();
+            img.src = "./images/sheet.png"
+            runGame();
         }
 
         function runGame(){
 
-            updtStats(); // Once the function runGame is called it will call for the updtStats function
+            updtStats(); 
 
-            draw(); // Once the function runGame is called it will call for the draw funcion
-
+            draw();
             window.requestAnimationFrame(runGame);
 
         }
 
         function updtStats(){
 
-            frames++; // Adds 1 tho the variable frames, wich initially was 0
-
-            player.playerMovement(); // calls the function playerMovement, wich is inside the variable player
-
             if (currentStats == stats.playing){
-            
-                obstacle.updtObstacle(); // Calls the function updtObstacle, wich is inside the variable obstacle
+
+                obstacle.updtObstacle(); 
             }
+
+            player.playerMovement(); 
+            ground.updtGround();
 
         }
 
         function draw(){
 
-            context.fillStyle = "#50beff"; // Defines the color of the sky
-            context.fillRect(0, 0, gameHeight, gameWidth); // Defines where the sky will start and where it will end
+           
+            bg.draw(0, 0);
 
             context.fillStyle = "#fff";
             context.font = "50px Arial";
-            context.fillText(player.score, 20, 58);
+            context.fillText(player.score, 30, 68);
+            context.fillText(player.lives, 540, 68);
 
-            if (currentStats == stats.play){
+            context.fillStyle = "rgba(0, 0, 0, " +labelnextLvl.textOpacity + ")";
+            context.fillText(labelnextLvl.newText, canvas.width/2 - context.measureText(labelnextLvl.newText).width/2, canvas.height/3);
 
-                context.fillStyle = "green"; 
-                context.fillRect(gameWidth/2 - 50, gameHeight/2 - 50, 100, 100);
-
-            } // Creates a square in the center of the canvas before the game start
-
-            else if (currentStats == stats.lose){
-
-                context.fillStyle = "red"; 
-                context.fillRect(gameWidth/2 - 50, gameHeight/2 - 50, 100, 100);
-
-                context.save();
-                context.translate(gameWidth / 2, gameHeight / 2);
-                context.fillStyle = "#fff";
-                if(player.score > highScore){
-                    context.fillText("New High-Score!", -context.measureText("New High-Score!").width/2, -65);
-                }
-                else {
-                    context.fillText("High-score: " + highScore, -context.measureText("High-score: " + highScore).width/2, -65);
-
-                }
-                
-                context.fillText(player.score, -context.measureText(player.score).width/2, 19);
-                context.restore();
-
-            } // creates a square in the center of the canvas if the player lose and show the player's score on it
-
-            else if (currentStats == stats.playing){
-
-                obstacle.drawObstacle(); //Calls the function drawObstacle, wich is inside the variable obstacle
-
-            } // only draw new obstacles while the game is running
-
-            ground.drawGround(); // Calls the function drawGround, wich is inside the variable ground
+            if (currentStats == stats.playing){
+                obstacle.drawObstacle();
+            }
+                       
+            ground.drawGround(); 
            
-            player.drawPlayer(); //Calls the function drawPlayer, wich is inside the variable player
+            player.drawPlayer(); 
+
+            if (currentStats == stats. play){
+                start.draw(gameWidth/2 - start.imgWidth/2, gameHeight /2 - start.imgHeight/2);
+            }
+
+            if (currentStats == stats.lose) {
+                youLose.draw(gameWidth/2 - youLose.imgWidth/2, gameHeight/2 - youLose.imgHeight/2 - spriteHighScore.imgHeight/2);
+                spriteHighScore.draw(gameWidth/2 - spriteHighScore.imgWidth/2, gameHeight/2 + youLose.imgHeight/2 - spriteHighScore.imgHeight/2 - 20);
+                context.fillStyle = "#fff";
+
+                if (player.score > highScore){
+                    
+                    newHS.draw(gameWidth/2 - 180, gameHeight/2 +30);
+                    context.fillText(player.score, 420, 480);
+                }
+
+                else {
+
+                    context.fillText(highScore, 420, 480);
+                    context.fillText(player.score, 375, 390);
+                }
+            }
 
         }
             
