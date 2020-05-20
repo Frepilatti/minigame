@@ -1,11 +1,14 @@
-function Sprite (x, y, imgWidth,  imgHeight)  {
+class Sprite {
 
-    this.x = x;
-    this.y = y;
-    this.imgWidth = imgWidth;
-    this.imgHeight = imgHeight;
-
-    this.draw = function(xCanvas, yCanvas) {
+    constructor(x, y, imgWidth,  imgHeight){
+        this.x = x;
+        this.y = y;
+        this.imgWidth = imgWidth;
+        this.imgHeight = imgHeight;
+        this.draw();
+    }
+    
+    draw = function(xCanvas, yCanvas) {
 
         context.drawImage(img, this.x, this.y, this.imgWidth, this.imgHeight, xCanvas, yCanvas, this.imgWidth, this.imgHeight);
     }
