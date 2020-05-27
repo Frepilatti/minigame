@@ -65,19 +65,19 @@ var canvas = document.querySelector(".canvas"),
                 player.gravity *= 0.6;
             break;
             case 4:
-                player.gravity *= 2;
+                player.gravity *= 2.5;
                 obstacleSpeed--;
-                maxJump = 6;
+                maxJump = 4;
             break;
             case 5:
-                player.gravity *= 2.5;
+                player.gravity *= 1.3;
                 obstacleSpeed--;
                 maxJump = 5;
             break;
             case 6:
-                player.gravity *= 3;
+                player.gravity *= 1.2;
                 obstacleSpeed--;
-                maxJump = 4;
+                maxJump = 6;
             break;
         }
         labelnextLvl.newText = "Level" + currentLvl;
